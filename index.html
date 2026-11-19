@@ -65,8 +65,12 @@
     // Opened before on this phone? Show the saved app at once (it refreshes itself in the background)
     var saved = null;
     try { if (localStorage.getItem('amv_app_ok') === '1') saved = localStorage.getItem('amv_app_html'); } catch (e) {}
-    if (saved && saved.indexOf('var BOOT') >= 0) { document.open(); document.write(saved); document.close(); }
-    else load();
+    function showSaved() { document.open(); document.write(saved); document.close(); }
+    if (saved && saved.indexOf('var BOOT') >= 0) {
+      // wait until this small page has finished loading, so the saved app REPLACES it (not added below it)
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(showSaved, 0); });
+      else setTimeout(showSaved, 0);
+    } else load();
   </script>
 </body>
 </html>
