@@ -52,10 +52,9 @@
     var FLAG = 'amv_direct_v2';
     var params = new URLSearchParams(location.search);
 
-    if (params.get('signin') === '1') {
+    function startSignin(hint) {
       document.getElementById('wait').style.display = 'none';
       document.getElementById('signin').style.display = 'flex';
-      var hint = params.get('hint') || '';
       if (hint) document.getElementById('hintText').textContent = 'Is ID se sign in karein: ' + hint + '. Phone 30 din tak yaad rakhega.';
       var s = document.createElement('script');
       s.src = 'https://accounts.google.com/gsi/client';
@@ -64,16 +63,22 @@
         google.accounts.id.initialize({
           client_id: CLIENT_ID,
           login_hint: hint || undefined,
+          auto_select: true,
+          use_fedcm_for_prompt: true,
           callback: function (r) {
             var q = new URLSearchParams(location.search);
             q.delete('signin'); q.delete('hint'); q.set('idt', r.credential);
             location.replace(location.pathname + '?' + q.toString());
           }
         });
-        google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' });
+        google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill' });
         google.accounts.id.prompt();
       };
       document.head.appendChild(s);
+    }
+
+    if (params.get('signin') === '1') {
+      startSignin(params.get('hint') || '');
     } else {
       var src = APP_URL + (location.search || '');
       var frame = document.getElementById('app');
@@ -94,6 +99,7 @@
         window.addEventListener('message', function (e) {
           if (!e.data || !e.data.amv) return;
           if (e.data.amv === 'ready') { ready = true; wait.style.display = 'none'; }
+          if (e.data.amv === 'signin') { ready = true; startSignin(e.data.hint || ''); }
           if (e.data.amv === 'clean') {
             var q = new URLSearchParams(location.search); q.delete('idt');
             history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : ''));
