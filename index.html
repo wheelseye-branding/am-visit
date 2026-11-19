@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E6B4A">
+  <title>WheelsEye | Branding AM Visit</title>
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
+  <style>
+    html, body { margin: 0; height: 100%; background: #F2F4F1; }
+    #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #F2F4F1; z-index: 1; }
+    .screen { position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+      padding: 24px; box-sizing: border-box; text-align: center; background: #F2F4F1; color: #17201C;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif; }
+    .screen img { width: 64px; height: 64px; }
+    .spin { width: 34px; height: 34px; border: 4px solid #D8E0DB; border-top-color: #0E6B4A; border-radius: 50%; animation: s .9s linear infinite; }
+    @keyframes s { to { transform: rotate(360deg); } }
+    .card { background: #fff; border: 1px solid #D8E0DB; border-radius: 14px; padding: 20px; max-width: 360px; width: 100%; box-sizing: border-box; }
+    .card h1 { font-size: 18px; margin: 0 0 8px; }
+    .card p { font-size: 14px; line-height: 1.45; margin: 0 0 12px; color: #5A6761; }
+    #gbtn { display: flex; justify-content: center; min-height: 44px; }
+    a { color: #0E6B4A; font-size: 15px; }
+    #signin, #direct { display: none; }
+  </style>
+</head>
+<body>
+  <div class="screen" id="wait">
+    <img src="icon.png" alt="WheelsEye">
+    <div class="spin"></div>
+    <div>Branding AM Visit khul raha hai…</div>
+    <a id="direct" href="#">Nahi khula? Yahan dabayein</a>
+  </div>
+
+  <div class="screen" id="signin">
+    <img src="icon.png" alt="WheelsEye">
+    <div class="card">
+      <h1>Google ID se sign in karein</h1>
+      <p id="hintText">Wahi Google ID chunein jo admin ne aapke liye add ki hai. Phone 30 din tak yaad rakhega.</p>
+      <div id="gbtn"></div>
+      <p style="margin-top:12px;font-size:12.5px">Link Chrome mein kholein, WhatsApp ke andar nahi.</p>
+    </div>
+  </div>
+
+  <iframe id="app" title="Branding AM Visit" allow="geolocation *; camera *; microphone *; clipboard-write *; fullscreen *"></iframe>
+
+  <script>
+    // ===== Apps Script link (/exec wala) =====
+    var APP_URL = 'https://script.google.com/macros/s/AKfycby5OasStA08ZfxH1LN9EnWMAZ6VzCFjDzNKFhx2ozKCMoKcny0G5FR0BEPv0tB1Md9e/exec';
+    var CLIENT_ID = '851478405695-16qu4vjk0qmq5o8l9ol7dtd5cvukhh8c.apps.googleusercontent.com';
+    // ==========================================
+
+    var FLAG = 'amv_direct';
+    var params = new URLSearchParams(location.search);
+
+    if (params.get('signin') === '1') {
+      document.getElementById('wait').style.display = 'none';
+      document.getElementById('signin').style.display = 'flex';
+      var hint = params.get('hint') || '';
+      if (hint) document.getElementById('hintText').textContent = 'Is ID se sign in karein: ' + hint + '. Phone 30 din tak yaad rakhega.';
+      var s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.onload = function () {
+        google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          login_hint: hint || undefined,
+          callback: function (r) {
+            var q = new URLSearchParams(location.search);
+            q.delete('signin'); q.delete('hint'); q.set('idt', r.credential);
+            location.replace(location.pathname + '?' + q.toString());
+          }
+        });
+        google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill' });
+        google.accounts.id.prompt();
+      };
+      document.head.appendChild(s);
+    } else {
+      var src = APP_URL + (location.search || '');
+      var frame = document.getElementById('app');
+      var wait = document.getElementById('wait');
+      var direct = document.getElementById('direct');
+      direct.href = src;
+      var ready = false;
+      var goDirect = function () {
+        if (ready) return;
+        try { localStorage.setItem(FLAG, '1'); } catch (e) {}
+        location.replace(src);
+      };
+      var remembered = false;
+      try { remembered = localStorage.getItem(FLAG) === '1'; } catch (e) {}
+      if (remembered) {
+        location.replace(src);
+      } else {
+        window.addEventListener('message', function (e) {
+          if (!e.data || !e.data.amv) return;
+          if (e.data.amv === 'ready') { ready = true; wait.style.display = 'none'; }
+          if (e.data.amv === 'clean') {
+            var q = new URLSearchParams(location.search); q.delete('idt');
+            history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : ''));
+          }
+        });
+        frame.addEventListener('load', function () { setTimeout(goDirect, 2500); });
+        setTimeout(function () { if (!ready) direct.style.display = 'block'; }, 8000);
+        setTimeout(goDirect, 20000);
+        frame.src = src;
+      }
+    }
+  </script>
+</body>
+</html>
