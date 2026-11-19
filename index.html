@@ -54,6 +54,7 @@
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then(function (html) {
           if (html.indexOf('var BOOT') < 0) throw new Error('not the app');
+          try { localStorage.setItem('amv_app_html', html); } catch (e) {}
           document.open(); document.write(html); document.close();
         })
         .catch(function () {
@@ -61,7 +62,11 @@
           document.getElementById('err').style.display = 'block';
         });
     }
-    load();
+    // Opened before on this phone? Show the saved app at once (it refreshes itself in the background)
+    var saved = null;
+    try { if (localStorage.getItem('amv_app_ok') === '1') saved = localStorage.getItem('amv_app_html'); } catch (e) {}
+    if (saved && saved.indexOf('var BOOT') >= 0) { document.open(); document.write(saved); document.close(); }
+    else load();
   </script>
 </body>
 </html>
